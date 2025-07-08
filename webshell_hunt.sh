@@ -66,7 +66,7 @@ scan_file() {
     done
 }
 
-# Start scanning
+# Start scanning..
 echo "Scanning directory: $TARGET_PATH ..."
 find "$TARGET_PATH" -type f 2>/dev/null | while read -r file; do
     scan_file "$file"
