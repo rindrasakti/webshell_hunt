@@ -11,32 +11,32 @@ while [[ $# -gt 0 ]]; do
                 TARGET_PATH="$2"
                 shift 2
             else
-                echo "Error: --path membutuhkan argumen"
+                echo "Error: --path requires a directory path."
                 exit 1
             fi
             ;;
         *)
-            echo "Penggunaan: $0 [--path /path/to/scan]"
+            echo "Usage: $0 [--path /path/to/scan]"
             exit 1
             ;;
     esac
 done
 
-# Jika --path tidak diberikan, minta input manual
+# Input fallback
 if [[ -z "$TARGET_PATH_SET" && -z "$1" ]]; then
-    read -rp "Masukkan direktori yang ingin discan (default: /var/www/html): " USER_INPUT
+    read -rp "Enter directory to scan (default: /var/www/html): " USER_INPUT
     if [[ -n "$USER_INPUT" ]]; then
         TARGET_PATH="$USER_INPUT"
     fi
 fi
 
-# Validasi direktori
+# Check if directory exists
 if [[ ! -d "$TARGET_PATH" ]]; then
-    echo "Direktori tidak ditemukan: $TARGET_PATH"
+    echo "Directory not found: $TARGET_PATH"
     exit 1
 fi
 
-# Pola kata kunci yang sering digunakan dalam webshell/backdoor
+# Suspicious patterns often used in obfuscated backdoors
 PATTERNS=(
     "eval"
     "system"
@@ -46,60 +46,30 @@ PATTERNS=(
     "base64_decode"
     "gzinflate"
     "strrev"
-    "passthru"
-    "popen"
-    "proc_open"
     "assert"
-    "create_function"
-    "file_put_contents"
-    "fopen"
-    "curl_exec"
-    "curl_multi_exec"
-    "ob_start"
-    "preg_replace"
-    "mb_decode_mimeheader"
-    "php_uname"
-    "getenv"
-    "phpinfo"
-    "ini_set"
-    "include"
-    "require"
-    "include_once"
-    "require_once"
-    "move_uploaded_file"
-    "chmod"
-    "chown"
-    "touch"
-    "copy"
-    "unlink"
-    "readfile"
-    "glob"
-    "scandir"
-    "dir"
-    "opendir"
-    "readdir"
+    "preg_replace.*\/e"
 )
 
 # Output file
 OUTPUT="hasil_scan_webshell.tsv"
-echo -e "File Path\t\t\t\tKeyword Dicurigai" > "$OUTPUT"
+echo -e "File Path\t\t\t\tSuspicious Keywords" > "$OUTPUT"
 
-# Fungsi scanning
+# Function to scan each file
 scan_file() {
     local file=$1
     for pattern in "${PATTERNS[@]}"; do
-        if grep -Ea "$pattern" "$file" >/dev/null 2>&1; then
-            match=$(grep -Eao "$pattern" "$file" | sort | uniq | paste -sd ", " -)
+        if grep -aE "$pattern" "$file" >/dev/null 2>&1; then
+            match=$(grep -aEo "$pattern" "$file" | sort | uniq | paste -sd ", " -)
             echo -e "$file\t$match" >> "$OUTPUT"
             break
         fi
     done
 }
 
-# Jalankan scanning
-echo "Memindai direktori: $TARGET_PATH ..."
-find "$TARGET_PATH" -type f -name "*.php" 2>/dev/null | while read -r file; do
+# Start scanning
+echo "Scanning directory: $TARGET_PATH ..."
+find "$TARGET_PATH" -type f 2>/dev/null | while read -r file; do
     scan_file "$file"
 done
 
-echo "Scan selesai. Hasil disimpan di: $OUTPUT"
+echo "Scan complete. Results saved to: $OUTPUT"
